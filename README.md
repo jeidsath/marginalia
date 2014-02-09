@@ -17,15 +17,28 @@ Marginalia presents a small community solution to the Ancient Greek digital docu
 
 ### Headings
 
-The `# Heading #` syntax is supported.
+    # Heading Level 1 #
+    ## Heading Level 2 ##
+
+### Emphasis
+
+    *em (italic)*
+
+    _em (italic)_
+
+    **strong (bold)**
+
+    __strong (bold)__
 
 ### Paragraphs
 
-Text surrounded by blank lines is a paragraph.
+    Text surrounded by blank lines is a paragraph.
+    Line breaks are ignored.
 
 ### Line breaks
 
-Manual line breaks are indicated by two spaces at the end of a line.
+    Manual line breaks can be indicated by  
+    two spaces at the end of a line.
 
 ### Footnotes
 
@@ -64,6 +77,33 @@ The † is the unicode character, not the HTML entity. An actual paragraph break
     right sidenote text. The right sidenote 
     channel should also be separated from the 
     text.
+
+### Quotations
+
+    Because we do not need a 'code' syntax we
+    instead use that for quotations. Curly quotes
+    are used to begin and end the quote. An
+    optional cite line at the bottom is allowed.
+    
+        “Four score and seven years ago our 
+        fathers brought forth on this continent 
+        a new nation, conceived in liberty, 
+        and dedicated to the proposition that 
+        all men are created equal.
+
+        Now we are engaged in a great civil 
+        war, testing whether that nation, or 
+        any nation so conceived and so 
+        dedicated, can long endure. We are met 
+        on a great battlefield of that war. We 
+        have come to dedicate a portion of that 
+        field, as a final resting place for 
+        those who here gave their lives that 
+        that nation might live. It is 
+        altogether fitting and proper that we 
+        should do this.”
+
+        Abraham Lincoln, G. A. 
 
 ## Rejustification
 
