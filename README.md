@@ -13,7 +13,6 @@ Marginalia presents a small community solution to the Ancient Greek digital docu
 3. Unlike Markdown, Marginalia documents must support footnotes and sidenotes &mdash; a difficulty for digital documents
 
 ## Flow
-*Digital document representation*
 
 A document for reading has a "flow" channel. A user of this document is expected to be able to follow that flow without distraction. There are two types of document elements:
 
