@@ -48,18 +48,19 @@ The † is the unicode character, not the HTML entity. An actual paragraph break
         sidnotes. In a text with left sidenotes,
         all document text is indented by X + 2
         characters (which can be any reasonable
-        number of characters) for the left 
-    ˙Slightly      sidenote channel. All ˙left sidenotes
-     more complex  are placed within the first X characters
-     sidenote      if possible, but can extend beyond this,
-        if necessary, as long as 2 spaces remain
+                    number of characters) for
+    ˙Slightly       the left sidenote. ˙Left
+     more complex   sidenotes are placed within
+     sidenote       the first X characters if 
+                    possible, but can extend 
+        beyond this, if necessary, as long as 3 
+        spaces remain in the middle in order to
     ˙3  separate the main text ˙from the
         sidenote. Left sidenotes are also marked
         in the text by a ˙ character.
 
-
         Right sidenotes are indicated similarly
-        with a ring˚ instead of a dot to         ˚Ring example
+        with a ring˚ instead of a dot to          ˚Ring example
         To demark the right sidenote text. The
         right sidenote channel should also be
         separated from the text.
