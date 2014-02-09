@@ -44,26 +44,30 @@ The † is the unicode character, not the HTML entity. An actual paragraph break
 
 ### Sidenotes
 
-    ˙1  This is an example of ˙left and right
-        sidnotes. In a text with left sidenotes,
-        all document text is indented by X + 2
-        characters (which can be any reasonable
+    ˙*1*  This is an example of ˙left and right 
+          sidnotes. In a text with left 
+    sidenotes, all document text is indented by 
+    X + 3 characters (which can be any reasonable
                     number of characters) for
     ˙Slightly       the left sidenote. ˙Left
      more complex   sidenotes are placed within
      sidenote       the first X characters if 
                     possible, but can extend 
-        beyond this, if necessary, as long as 3 
+    beyond this, if necessary, as long as 3 
         spaces remain in the middle in order to
     ˙3  separate the main text ˙from the
         sidenote. Left sidenotes are also marked
-        in the text by a ˙ character.
+    in the text by a ˙ character.
 
-        Right sidenotes are indicated similarly
-        with a ring˚ instead of a dot to          ˚Ring example
-        To demark the right sidenote text. The
-        right sidenote channel should also be
-        separated from the text.
+    Right sidenotes are indicated similarly with 
+    a ring˚ instead of a dot To demark the right    ˚Ring example
+    right sidenote text. The right sidenote 
+    channel should also be separated from the 
+    text.
+
+## Rejustification
+
+In general, the above paragraph justification is too complicated without tooling. Therefore marginalia will rejustify txt files after editing, as long as proper spacing between channels is maintained.
 
 ## Flow
 
