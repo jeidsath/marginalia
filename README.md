@@ -10,7 +10,37 @@ Marginalia presents a small community solution to the Ancient Greek digital docu
     - UTF-8 NFC Unicode
     - Use a Markdown-style syntax
 2. Because composing new texts is not a requirement, syntax for Marginalia is more exact than for Markdown
-3. Unlike Markdown, Marginalia documents must support footnotes and sidenotes &mdash; a difficulty for digital documents
+3. Unlike Markdown, Marginalia documents must support footnotes and sidenotes &mdash; a difficulty for digital documents (see flow)
+4. We take advantage of Unicode to improve the presentation of text in source documents
+
+## Syntax
+
+### Headings
+
+The `# Heading #` syntax is supported.
+
+### Paragraphs
+
+Text surrounded by blank lines is a paragraph.
+
+### Line breaks
+
+Manual line breaks are indicated by two spaces at the end of a line.
+
+### Footnotes
+
+    This is an example† of a footnote.
+    While the text breaks to show the footnote
+    at the bottom of the "page," it is not 
+    interpreted as a paragraph break instead
+
+    †Example footnote
+
+    the paragraph continues unbroken. It is
+    assumed that rejustifying tools can move
+    the location of the page break.
+
+The † is the unicode character, not the HTML entity.
 
 ## Flow
 
