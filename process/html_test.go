@@ -3,6 +3,7 @@ package process
 import (
 	"fmt"
 	"testing"
+        "reflect"
 )
 
 func TestOutput(t *testing.T) {
@@ -249,8 +250,8 @@ func TestInlineQuote(t *testing.T) {
 	expected_html += "inline quote as part of the</q> sentence.</p>"
 
 	expected_text := []string{
-                "This is a sentence with an “inline quote as part of the ‖ Joel” sentence.",
-        }
+		"This is a sentence with an “inline quote as part of the ‖ Joel” sentence.",
+	}
 
 	if para.ToHtml() != expected_html {
 		fmt.Println(para.ToHtml())
@@ -268,4 +269,59 @@ func TestInlineQuote(t *testing.T) {
 		t.Fail()
 	}
 
+}
+
+func TestImport(t *testing.T) {
+        document := "# Title #\n"
+        document += "\n"
+        document += "A short paragraph that doesn't say very\n"
+        document += "much and is wrapped by hand to make sure\n"
+        document += "that we are smart enought to pick up the\n"
+        document += "entire paragraph.\n"
+
+        coll, err := Import(document)
+
+        if err != nil {
+                fmt.Println(err)
+                t.Fail()
+        }
+
+        if len(coll) > 1 && reflect.TypeOf(coll[0]) != reflect.TypeOf(&Header{}) {
+                fmt.Printf("Collection[0]: %v\n", reflect.TypeOf(coll[0]))
+                t.Fail()
+        } else {
+                exp := []string{"Title"}
+                if head := coll[0].(*Header) ; head.Level != 1 || 
+                compareStrings(coll[0].ToStrings(), exp) {
+                        fmt.Println("Bad Header")
+                        t.Fail()
+                }
+        }
+
+        if len(coll) > 2 && reflect.TypeOf(coll[1]) != reflect.TypeOf(&Paragraph{}) {
+                fmt.Printf("Collection[0]: %v\n", reflect.TypeOf(coll[1]))
+                t.Fail()
+        }
+
+        if len(coll) != 2 {
+                fmt.Printf("Collection size: %d\n", len(coll))
+                t.Fail()
+        }
+}
+
+func TestRejustify(t *testing.T) {
+
+	lines := []string{
+		"This is a test",
+		"document.",
+	}
+
+	expected_text := "This is a test\ndocument."
+
+	output, err := Rejustify(lines)
+
+	if err != nil || output != expected_text {
+		fmt.Println(Rejustify(lines))
+		t.Fail()
+	}
 }
