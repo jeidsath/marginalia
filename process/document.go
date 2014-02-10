@@ -1,8 +1,8 @@
 package process
 
 import (
+	"errors"
 	"log"
-        "errors"
 	"strconv"
 )
 
@@ -177,13 +177,13 @@ func (nn *Note) ToText() string {
 }
 
 func (nn *Note) AddElement(ee Element) error {
-        switch ee.(type) {
-        default:
-                return errors.New("Bad type for Note")
-        case *Text, *Emphasis:
-                nn.Elements = append(nn.Elements, ee)
-                return nil
-        }
+	switch ee.(type) {
+	default:
+		return errors.New("Bad type for Note")
+	case *Text, *Emphasis:
+		nn.Elements = append(nn.Elements, ee)
+		return nil
+	}
 }
 
 func (pp *Block) AddElement(ee Element) {
@@ -262,6 +262,12 @@ func (pp *Block) ToStrings() []string {
 			output = append(output, "")
 			line = &output[len(output)-1]
 			spaceNeeded = false
+                case *InlineQuote:
+                        if spaceNeeded {
+                                *line += " "
+                        }
+                        *line += "“" + ee.ToText() + "”"
+                        spaceNeeded = true
 		}
 	}
 	return output
@@ -278,13 +284,13 @@ func (pp *Paragraph) ToHtml() string {
 // These footnotes can't handle collections
 // This can be changed in v2 this at some point
 type Footnote struct {
-        Note
+	Note
 }
 
 func (ff *Footnote) ToHtml() string {
 	output := "<span class=\"footnote\">†"
 
-        output += ff.Note.ToHtml()
+	output += ff.Note.ToHtml()
 
 	output += "</span>"
 	return output
@@ -296,7 +302,7 @@ type Leftnote struct {
 
 func (ll *Leftnote) ToHtml() string {
 	output := "<span class=\"leftnote\">˙"
-        output += ll.Note.ToHtml()
+	output += ll.Note.ToHtml()
 	output += "</span>"
 	return output
 }
@@ -358,5 +364,33 @@ func (bb *BlockQuote) ToStrings() []string {
 		output = append(output, "    "+bb.Citation)
 	}
 
+	return output
+}
+
+type InlineQuote struct {
+	Note
+	Citation string
+}
+
+func (iq *InlineQuote) ToHtml() string {
+	cite := ""
+	if iq.Citation != "" {
+		cite = " cite=\"" + iq.Citation + "\""
+	}
+	output := "<q" + cite + ">"
+	output += iq.Note.ToHtml()
+	output += "</q>"
+	return output
+}
+
+func (iq *InlineQuote) ToText() string {
+	cite := ""
+	if iq.Citation != "" {
+		cite = " ‖ " + iq.Citation
+	}
+
+        output := ""
+	output += iq.Note.ToText()
+	output += cite + ""
 	return output
 }

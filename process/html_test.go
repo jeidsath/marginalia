@@ -180,7 +180,7 @@ func TestBlockQuote(t *testing.T) {
 	left.AddElement(&Text{"L"})
 	para.AddElement(left)
 	para.AddElement(&Text{"leftnote. And this is a rightnote"})
-        right := &Rightnote{}
+	right := &Rightnote{}
 	right.AddElement(&Text{"Rightnote text"})
 	para.AddElement(right)
 	para.AddElement(&Text{"sentence."})
@@ -224,7 +224,42 @@ func TestBlockQuote(t *testing.T) {
 
 	if !compareStrings(expected_text, quote.ToStrings()) {
 		for ii, ll := range quote.ToStrings() {
-			if ll != expected_text[ii] {
+			if ii < len(expected_text) && ll != expected_text[ii] {
+				fmt.Printf("(SHOULD BE %d: %v)\n", len(expected_text[ii]),
+					expected_text[ii])
+			}
+			fmt.Printf("%d: %v\n", len(ll), ll)
+		}
+		t.Fail()
+	}
+
+}
+
+func TestInlineQuote(t *testing.T) {
+	para := Paragraph{}
+
+	para.AddElement(&Text{"This is a sentence with an"})
+	quote := InlineQuote{}
+	quote.AddElement(&Text{"inline quote as part of the"})
+	quote.Citation = "Joel"
+	para.AddElement(&quote)
+	para.AddElement(&Text{"sentence."})
+
+	expected_html := "<p>This is a sentence with an <q cite=\"Joel\">"
+	expected_html += "inline quote as part of the</q> sentence.</p>"
+
+	expected_text := []string{
+                "This is a sentence with an “inline quote as part of the ‖ Joel” sentence.",
+        }
+
+	if para.ToHtml() != expected_html {
+		fmt.Println(para.ToHtml())
+		t.Fail()
+	}
+
+	if !compareStrings(expected_text, para.ToStrings()) {
+		for ii, ll := range para.ToStrings() {
+			if ii < len(expected_text) && ll != expected_text[ii] {
 				fmt.Printf("(SHOULD BE %d: %v)\n", len(expected_text[ii]),
 					expected_text[ii])
 			}
