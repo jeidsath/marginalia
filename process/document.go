@@ -394,3 +394,7 @@ func (iq *InlineQuote) ToText() string {
 	output += cite + ""
 	return output
 }
+
+func (pp *Paragraph) Empty() bool {
+        return len(pp.Elements) == 0
+}

@@ -3,7 +3,7 @@ package process
 import (
 	"fmt"
 	"testing"
-        "reflect"
+//        "reflect"
 )
 
 func TestOutput(t *testing.T) {
@@ -286,7 +286,7 @@ func TestImport(t *testing.T) {
                 t.Fail()
         }
 
-        if len(coll) > 1 && reflect.TypeOf(coll[0]) != reflect.TypeOf(&Header{}) {
+        /*if len(coll) > 1 && reflect.TypeOf(coll[0]) != reflect.TypeOf(&Header{}) {
                 fmt.Printf("Collection[0]: %v\n", reflect.TypeOf(coll[0]))
                 t.Fail()
         } else {
@@ -301,7 +301,7 @@ func TestImport(t *testing.T) {
         if len(coll) > 2 && reflect.TypeOf(coll[1]) != reflect.TypeOf(&Paragraph{}) {
                 fmt.Printf("Collection[0]: %v\n", reflect.TypeOf(coll[1]))
                 t.Fail()
-        }
+        }*/
 
         if len(coll) != 2 {
                 fmt.Printf("Collection size: %d\n", len(coll))
