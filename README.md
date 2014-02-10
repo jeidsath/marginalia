@@ -105,6 +105,12 @@ The † is the unicode character, not the HTML entity. An actual paragraph break
 
         Abraham Lincoln, G. A. 
 
+    Inline quotes are also allowed like with the
+    same technique. “Curly quotes are used to
+    begin and end the quote. ‖ Myself” A unicode
+    double bar is used to cite, if necessary. 
+
+
 ## Rejustification
 
 In general, the above paragraph justification is too complicated without tooling. Therefore marginalia will rejustify txt files after editing, as long as proper spacing between channels is maintained.
