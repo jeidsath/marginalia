@@ -2,6 +2,7 @@ package process
 
 import (
 	"log"
+        "errors"
 	"strconv"
 )
 
@@ -31,7 +32,6 @@ type Element interface {
 }
 
 type Collection interface {
-	AddElement(Element)
 	ToStrings() []string
 	ToHtml() string
 }
@@ -133,78 +133,230 @@ func (hh *Header) ToHtml() string {
 	return "<" + hlevel + ">" + inner_html + "</" + hlevel + ">"
 }
 
-type Paragraph struct {
+type Block struct {
 	Elements []Element
 }
 
-func (pp *Paragraph) AddElement(ee Element) {
-	pp.Elements = append(pp.Elements, ee)
+type Note struct {
+	Elements []Element
 }
 
-func (pp *Paragraph) ToHtml() string {
-	output := "<p>"
+func (nn *Note) ToHtml() string {
+	output := ""
 
-	for ii, ee := range pp.Elements {
-                switch ee.(type) {
-                default:
-                        if ii != 0 {
-                                output += " "
-                        }
-                        output += ee.ToHtml()
-                case *Footnote:
-                        output += "† "
-                        output += ee.ToHtml()
-                }
+	for ii, ee := range nn.Elements {
+		switch ee.(type) {
+		default:
+			log.Fatalln("Note contains non-Text or non-Emphasis type")
+		case *Text, *Emphasis:
+			if ii != 0 {
+				output += " "
+			}
+			output += ee.ToHtml()
+		}
 	}
 
-	output += "</p>"
+	output += ""
 	return output
 }
 
-func (pp *Paragraph) ToText() []string {
+func (nn *Note) ToText() string {
+	output := ""
+	for ii, ee := range nn.Elements {
+		switch ee.(type) {
+		default:
+			log.Fatalln("Note contains non-Text or non-Emphasis type")
+		case *Text, *Emphasis:
+			if ii != 0 {
+				output += " "
+			}
+			output += ee.ToText()
+		}
+	}
+	return output
+}
+
+func (nn *Note) AddElement(ee Element) error {
+        switch ee.(type) {
+        default:
+                return errors.New("Bad type for Note")
+        case *Text, *Emphasis:
+                nn.Elements = append(nn.Elements, ee)
+                return nil
+        }
+}
+
+func (pp *Block) AddElement(ee Element) {
+	pp.Elements = append(pp.Elements, ee)
+}
+
+func (pp *Block) ToHtml() string {
+	output := ""
+	spaceNeeded := false
+
+	for _, ee := range pp.Elements {
+		switch ee.(type) {
+		default:
+			if spaceNeeded {
+				output += " "
+			}
+			output += ee.ToHtml()
+			spaceNeeded = true
+		case *Footnote:
+			output += "† "
+			output += ee.ToHtml()
+			spaceNeeded = true
+		case *Leftnote:
+			output += " "
+			output += ee.ToHtml()
+			output += " ˙"
+			spaceNeeded = false
+		case *Rightnote:
+			output += "˚ "
+			output += ee.ToHtml()
+			spaceNeeded = true
+		}
+
+	}
+
+	return output
+}
+
+func (pp *Block) ToStrings() []string {
 	output := []string{""}
 	line := &output[0]
+
+	spaceNeeded := false
 
 	for _, ee := range pp.Elements {
 		switch ee.(type) {
 		default:
 			log.Fatalln("Bad type in ToText")
 		case *Text, *Emphasis:
-			if *line != "" {
+			if spaceNeeded {
 				*line += " "
 			}
 			*line += ee.ToText()
+			spaceNeeded = true
 		case *LineBreak:
 			output = append(output, "")
 			line = &output[len(output)-1]
-                case *Footnote:
-                        *line += "†"
-                        note := "†" + ee.ToText()
-                        output = append(output, note)
-                        output = append(output, "")
+			spaceNeeded = false
+		case *Footnote:
+			*line += "†"
+			note := "†" + ee.ToText()
+			output = append(output, note)
+			output = append(output, "")
 			line = &output[len(output)-1]
+			spaceNeeded = false
+		case *Leftnote:
+			note := "˙" + ee.ToText()
+			output = append(output, note)
+			output = append(output, "˙")
+			line = &output[len(output)-1]
+			spaceNeeded = false
+		case *Rightnote:
+			*line += "˚"
+			note := "˚" + ee.ToText()
+			output = append(output, note)
+			output = append(output, "")
+			line = &output[len(output)-1]
+			spaceNeeded = false
 		}
 	}
 	return output
 }
 
+type Paragraph struct {
+	Block
+}
+
+func (pp *Paragraph) ToHtml() string {
+	return "<p>" + pp.Block.ToHtml() + "</p>"
+}
+
 // These footnotes can't handle collections
 // This can be changed in v2 this at some point
 type Footnote struct {
-        Text
+        Note
 }
 
 func (ff *Footnote) ToHtml() string {
 	output := "<span class=\"footnote\">†"
 
-        output += ff.Text.ToHtml()
+        output += ff.Note.ToHtml()
 
 	output += "</span>"
 	return output
 }
 
-func (ff *Footnote) ToText() string {
-        output := ""
-        output += ff.Text.ToText()
-        return output
+type Leftnote struct {
+	Note
+}
+
+func (ll *Leftnote) ToHtml() string {
+	output := "<span class=\"leftnote\">˙"
+        output += ll.Note.ToHtml()
+	output += "</span>"
+	return output
+}
+
+type Rightnote struct {
+	Note
+}
+
+func (rr *Rightnote) ToHtml() string {
+	output := "<span class=\"rightnote\">˚"
+	output += rr.Note.ToHtml()
+	output += "</span>"
+	return output
+}
+
+type BlockQuote struct {
+	Paragraphs []Paragraph
+	Citation   string
+}
+
+func (bb *BlockQuote) AddParagraph(para Paragraph) {
+	bb.Paragraphs = append(bb.Paragraphs, para)
+}
+
+func (bb *BlockQuote) ToHtml() string {
+	inner_html := ""
+	for ii, pp := range bb.Paragraphs {
+		if ii != 0 {
+			inner_html += "\n"
+		}
+		inner_html += pp.ToHtml()
+	}
+	cite := ""
+	if bb.Citation != "" {
+		cite = " cite=\"" + bb.Citation + "\""
+	}
+	return "<blockquote" + cite + ">\n" + inner_html + "\n</blockquote>"
+}
+
+func (bb *BlockQuote) ToStrings() []string {
+	var strings []string
+	for ii, pp := range bb.Paragraphs {
+		if ii != 0 {
+			strings = append(strings, "")
+		}
+		for _, ss := range pp.ToStrings() {
+			strings = append(strings, ss)
+		}
+	}
+
+	output := []string{}
+	for _, ss := range strings {
+		//indent 4
+		output = append(output, "    "+ss)
+	}
+
+	if bb.Citation != "" {
+		output = append(output, "    ")
+		output = append(output, "    "+bb.Citation)
+	}
+
+	return output
 }

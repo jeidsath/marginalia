@@ -93,26 +93,31 @@ func TestParagraphStruct(t *testing.T) {
 	expected_text := []string{"This is a test paragraph *that contains bold* text.",
 		"And text after a line break."}
 
-	if para.ToHtml() != expected_html || !compareStrings(expected_text, para.ToText()) {
+	if para.ToHtml() != expected_html || !compareStrings(expected_text, para.ToStrings()) {
 		fmt.Println(para.ToHtml())
-		fmt.Println(para.ToText())
+		fmt.Println(para.ToStrings())
 		t.Fail()
 	}
 }
 
-func TestFootNotes(t *testing.T) {
+func TestFootnotes(t *testing.T) {
 	para := Paragraph{}
 	para.AddElement(&Text{"This is some"})
-	foot := &Footnote{Text{"Only four words."}}
+	foot := &Footnote{}
+
+	foot.AddElement(&Text{"Only"})
+	foot.AddElement(&Emphasis{Text{"four"}, false, true})
+	foot.AddElement(&Text{"words."})
+
 	para.AddElement(foot)
 	para.AddElement(&Text{"text."})
 
 	expected_html := "<p>This is some† "
-	expected_html += "<span class=\"footnote\">†Only four words.</span> text.</p>"
+	expected_html += "<span class=\"footnote\">†Only <strong>four</strong> words.</span> text.</p>"
 
 	expected_text := []string{
 		"This is some†",
-		"†Only four words.",
+		"†Only *four* words.",
 		"text.",
 	}
 
@@ -121,10 +126,111 @@ func TestFootNotes(t *testing.T) {
 		t.Fail()
 	}
 
-	if !compareStrings(expected_text, para.ToText()) {
-		for ii, ll := range para.ToText() {
+	if !compareStrings(expected_text, para.ToStrings()) {
+		for ii, ll := range para.ToStrings() {
 			fmt.Printf("%d: %v\n", ii, ll)
 		}
 		t.Fail()
 	}
+}
+
+func TestSideNotes(t *testing.T) {
+	para := Paragraph{}
+	para.AddElement(&Text{"This is a sentence with a"})
+	left := &Leftnote{}
+	left.AddElement(&Text{"L"})
+	para.AddElement(left)
+	para.AddElement(&Text{"leftnote. And this is a rightnote"})
+	right := &Rightnote{}
+	right.AddElement(&Text{"Rightnote text"})
+	para.AddElement(right)
+	para.AddElement(&Text{"sentence."})
+
+	expected_html := "<p>This is a sentence with a <span class=\"leftnote\">˙L</span> "
+	expected_html += "˙leftnote. And this is a rightnote˚ <span class=\"rightnote\">"
+	expected_html += "˚Rightnote text</span> sentence.</p>"
+
+	expected_text := []string{
+		"This is a sentence with a",
+		"˙L",
+		"˙leftnote. And this is a rightnote˚",
+		"˚Rightnote text",
+		"sentence.",
+	}
+
+	if para.ToHtml() != expected_html {
+		fmt.Println(para.ToHtml())
+		t.Fail()
+	}
+
+	if !compareStrings(expected_text, para.ToStrings()) {
+		for ii, ll := range para.ToStrings() {
+			fmt.Printf("%d: %v\n", ii, ll)
+		}
+		t.Fail()
+	}
+}
+
+func TestBlockQuote(t *testing.T) {
+	quote := BlockQuote{}
+
+	para := Paragraph{}
+	para.AddElement(&Text{"This is a sentence with a"})
+	left := &Leftnote{}
+	left.AddElement(&Text{"L"})
+	para.AddElement(left)
+	para.AddElement(&Text{"leftnote. And this is a rightnote"})
+        right := &Rightnote{}
+	right.AddElement(&Text{"Rightnote text"})
+	para.AddElement(right)
+	para.AddElement(&Text{"sentence."})
+
+	quote.AddParagraph(para)
+	quote.AddParagraph(para)
+
+	quote.Citation = "Joel"
+
+	expected_html := "<blockquote cite=\"Joel\">\n"
+	expected_html += "<p>This is a sentence with a "
+	expected_html += "<span class=\"leftnote\">˙L</span> "
+	expected_html += "˙leftnote. And this is a rightnote˚ <span class=\"rightnote\">"
+	expected_html += "˚Rightnote text</span> sentence.</p>\n"
+	expected_html += "<p>This is a sentence with a "
+	expected_html += "<span class=\"leftnote\">˙L</span> "
+	expected_html += "˙leftnote. And this is a rightnote˚ <span class=\"rightnote\">"
+	expected_html += "˚Rightnote text</span> sentence.</p>\n"
+	expected_html += "</blockquote>"
+
+	expected_text := []string{
+		"    This is a sentence with a",
+		"    ˙L",
+		"    ˙leftnote. And this is a rightnote˚",
+		"    ˚Rightnote text",
+		"    sentence.",
+		"    ",
+		"    This is a sentence with a",
+		"    ˙L",
+		"    ˙leftnote. And this is a rightnote˚",
+		"    ˚Rightnote text",
+		"    sentence.",
+		"    ",
+		"    Joel",
+	}
+
+	if quote.ToHtml() != expected_html {
+		fmt.Println(quote.ToHtml())
+		t.Fail()
+	}
+
+	if !compareStrings(expected_text, quote.ToStrings()) {
+		for ii, ll := range quote.ToStrings() {
+			if ll != expected_text[ii] {
+				fmt.Printf("(SHOULD BE %d: %v)\n", len(expected_text[ii]),
+					expected_text[ii])
+			}
+			fmt.Printf("%d: %v\n", len(ll), ll)
+		}
+		t.Fail()
+	}
+
 }
