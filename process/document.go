@@ -145,10 +145,16 @@ func (pp *Paragraph) ToHtml() string {
 	output := "<p>"
 
 	for ii, ee := range pp.Elements {
-		if ii != 0 {
-			output += " "
-		}
-		output += ee.ToHtml()
+                switch ee.(type) {
+                default:
+                        if ii != 0 {
+                                output += " "
+                        }
+                        output += ee.ToHtml()
+                case *Footnote:
+                        output += "† "
+                        output += ee.ToHtml()
+                }
 	}
 
 	output += "</p>"
@@ -171,7 +177,34 @@ func (pp *Paragraph) ToText() []string {
 		case *LineBreak:
 			output = append(output, "")
 			line = &output[len(output)-1]
+                case *Footnote:
+                        *line += "†"
+                        note := "†" + ee.ToText()
+                        output = append(output, note)
+                        output = append(output, "")
+			line = &output[len(output)-1]
 		}
 	}
 	return output
+}
+
+// These footnotes can't handle collections
+// This can be changed in v2 this at some point
+type Footnote struct {
+        Text
+}
+
+func (ff *Footnote) ToHtml() string {
+	output := "<span class=\"footnote\">†"
+
+        output += ff.Text.ToHtml()
+
+	output += "</span>"
+	return output
+}
+
+func (ff *Footnote) ToText() string {
+        output := ""
+        output += ff.Text.ToText()
+        return output
 }

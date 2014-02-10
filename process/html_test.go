@@ -99,3 +99,32 @@ func TestParagraphStruct(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestFootNotes(t *testing.T) {
+	para := Paragraph{}
+	para.AddElement(&Text{"This is some"})
+	foot := &Footnote{Text{"Only four words."}}
+	para.AddElement(foot)
+	para.AddElement(&Text{"text."})
+
+	expected_html := "<p>This is some† "
+	expected_html += "<span class=\"footnote\">†Only four words.</span> text.</p>"
+
+	expected_text := []string{
+		"This is some†",
+		"†Only four words.",
+		"text.",
+	}
+
+	if para.ToHtml() != expected_html {
+		fmt.Println(para.ToHtml())
+		t.Fail()
+	}
+
+	if !compareStrings(expected_text, para.ToText()) {
+		for ii, ll := range para.ToText() {
+			fmt.Printf("%d: %v\n", ii, ll)
+		}
+		t.Fail()
+	}
+}
