@@ -12,7 +12,7 @@ type intermediates interface {
 
 func consumeHeaders(input *([]intermediates)) ([]intermediates, error) {
 	var output []intermediates
-	re := regexp.MustCompile("^(#+)(.*)(#+)$")
+	re := regexp.MustCompile("^(#+)(.*?)(#+)$")
 	for _, ll := range *input {
 		switch ll.(type) {
 		default:
@@ -20,11 +20,13 @@ func consumeHeaders(input *([]intermediates)) ([]intermediates, error) {
 		case string:
 			if res := re.FindStringSubmatch(ll.(string)); res != nil {
 				if res[1] != res[3] {
+                                        fmt.Println(res[1])
+                                        fmt.Println(res[3])
 					return *input, errors.New("Header levels not matched")
 				}
 				head := Header{}
 				head.Level = len(res[1])
-				head.AddElement(&Text{res[2]})
+				head.AddElement(&Text{strings.Trim(res[2], " ")})
 				output = append(output, &head)
 			} else {
 				output = append(output, ll)
@@ -37,64 +39,87 @@ func consumeHeaders(input *([]intermediates)) ([]intermediates, error) {
 func consumeQuotes(input *([]intermediates)) ([]intermediates, error) {
 	var output []intermediates
 	var err error
+        var quote *BlockQuote
+
+        quoteLines := []string{}
 
 	for _, ll := range *input {
 		switch ll.(type) {
 		default:
 			output = append(output, ll)
+                        if len(quoteLines) != 0 {
+                                quote, err = makeQuote(quoteLines)
+				output = append(output, quote)
+			}
+			quoteLines = []string{}
 		case string:
 			re := regexp.MustCompile("^ {4}(.*)$")
 			if res := re.FindStringSubmatch(ll.(string)); res != nil {
-				//TODO
+                                quoteLines = append(quoteLines, ll.(string)[4:])
 			} else {
 				output = append(output, ll)
+                                if len(quoteLines) != 0 {
+                                        quote, err = makeQuote(quoteLines)
+                                        output = append(output, quote)
+                                        quoteLines = []string{}
+                                }
 			}
 		}
 	}
 
 	return output, err
+}
+
+func makeParagraph(input []string) (*Paragraph, error) {
+        ss := strings.Join(input, " ")
+        para := &Paragraph{}
+        para.AddElement(&Text{ss})
+        return para, nil
+}
+
+func makeQuote(input []string) (*BlockQuote, error) {
+        return &BlockQuote{}, nil
 }
 
 func consumeParagraphs(input *([]intermediates)) ([]intermediates, error) {
 	var output []intermediates
 	var err error
+        var para *Paragraph
 
-	para := &Paragraph{}
+        paraLines := []string{}
 
 	for _, ll := range *input {
 		switch ll.(type) {
 		default:
 			output = append(output, ll)
-			if !para.Empty() {
+			if len(paraLines) != 0 {
+                                para, err = makeParagraph(paraLines)
 				output = append(output, para)
+                                paraLines = []string{}
 			}
-			para = &Paragraph{}
 		case string:
 			re := regexp.MustCompile("^$")
 			if res := re.FindStringSubmatch(ll.(string)); res != nil {
-				if !para.Empty() {
-					output = append(output, para)
-				}
-				para = &Paragraph{}
-			} else {
-				if para.Empty() {
-					para.AddElement(&Text{ll.(string)})
-				} else {
-					le := para.Elements[len(para.Elements)-1]
-                                        le.(*Text).content += " " + ll.(string)
-				}
+                                if len(paraLines) != 0 {
+                                        para, err = makeParagraph(paraLines)
+                                        output = append(output, para)
+                                        paraLines = []string{}
+                                }
+                        } else {
+                                paraLines = append(paraLines, ll.(string))
 			}
 		}
 	}
 
-	if !para.Empty() {
-		output = append(output, para)
+	if len(paraLines) != 0 {
+               para, err = makeParagraph(paraLines)
+               output = append(output, para)
 	}
 
 	return output, err
 }
 
-func consumeBlankLines(input *([]intermediates)) ([]Collection, error) {
+func convertToCollection(input *([]intermediates)) ([]Collection, error) {
 	coll := []Collection{}
 	var err error
 	for _, ll := range *input {
@@ -102,9 +127,7 @@ func consumeBlankLines(input *([]intermediates)) ([]Collection, error) {
 		default:
 			coll = append(coll, ll.(Collection))
 		case string:
-			if ll.(string) != "" {
-				err = errors.New("Non-blank lines")
-			}
+                        err = errors.New("Non-consumed lines")
 		}
 
 	}
@@ -136,7 +159,7 @@ func Import(input string) ([]Collection, error) {
 		return []Collection{}, err
 	}
 
-	output, err := consumeBlankLines(&intrColl)
+	output, err := convertToCollection(&intrColl)
 
 	fmt.Println(intrColl)
 	fmt.Println(output)

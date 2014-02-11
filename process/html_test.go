@@ -3,7 +3,8 @@ package process
 import (
 	"fmt"
 	"testing"
-//        "reflect"
+        "strings"
+        //"reflect"
 )
 
 func TestOutput(t *testing.T) {
@@ -271,6 +272,14 @@ func TestInlineQuote(t *testing.T) {
 
 }
 
+func collectionString(coll []Collection) string {
+        output := ""
+        for _, cc := range coll {
+                output += strings.Join(cc.ToStrings(), "\n") + "\n\n"
+        }
+        return output
+}
+
 func TestImport(t *testing.T) {
         document := "# Title #\n"
         document += "\n"
@@ -278,6 +287,10 @@ func TestImport(t *testing.T) {
         document += "much and is wrapped by hand to make sure\n"
         document += "that we are smart enought to pick up the\n"
         document += "entire paragraph.\n"
+        document += "\n"
+        document += "## Header2 ##\n"
+        document += "\n"
+        document += "A short paragraph that doesn't say anything.\n"
 
         coll, err := Import(document)
 
@@ -286,7 +299,15 @@ func TestImport(t *testing.T) {
                 t.Fail()
         }
 
-        /*if len(coll) > 1 && reflect.TypeOf(coll[0]) != reflect.TypeOf(&Header{}) {
+        if len(coll) != 4 {
+                fmt.Printf("Collection size: %d\n", len(coll))
+                t.Fail()
+        }
+
+        fmt.Println(collectionString(coll))
+        t.Fail()
+
+/*        if len(coll) > 1 && reflect.TypeOf(coll[0]) != reflect.TypeOf(&Header{}) {
                 fmt.Printf("Collection[0]: %v\n", reflect.TypeOf(coll[0]))
                 t.Fail()
         } else {
@@ -301,12 +322,9 @@ func TestImport(t *testing.T) {
         if len(coll) > 2 && reflect.TypeOf(coll[1]) != reflect.TypeOf(&Paragraph{}) {
                 fmt.Printf("Collection[0]: %v\n", reflect.TypeOf(coll[1]))
                 t.Fail()
-        }*/
-
-        if len(coll) != 2 {
-                fmt.Printf("Collection size: %d\n", len(coll))
-                t.Fail()
         }
+        */
+
 }
 
 func TestRejustify(t *testing.T) {
