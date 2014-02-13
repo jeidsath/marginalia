@@ -83,84 +83,249 @@ func makeText(input []intermediates) ([]Element, error) {
 	strong := false
 	em := false
 
-        fn := func(coll *([]Element), text *string, strong bool, em bool) (*string) {
-                if len(*text) != 0 {
-                        if strong || em {
-                                *coll = append(*coll, &Emphasis{Text{*text}, em, strong})
-                        } else {
-                                *coll = append(*coll, &Text{*text})
-                        }
-                }
-                return new(string)
-        }
+	AddTextEm := func(coll *([]Element), text *string, strong bool, em bool) *string {
+		ss := strings.Trim(*text, " \n")
+		if len(ss) != 0 {
+			if strong || em {
+				*coll = append(*coll, &Emphasis{Text{ss}, em, strong})
+			} else {
+				*coll = append(*coll, &Text{ss})
+			}
+		}
+		return new(string)
+	}
 
 	for _, ll := range input {
-                if *text != "" {
-                        if (*text)[len(*text) - 1] != ' ' {
-                                *text += " "
-                        }
-                }
+		if *text != "" {
+			if (*text)[len(*text)-1] != ' ' {
+				*text += " "
+			}
+		}
 		switch ll.(type) {
 		default:
 			err = errors.New("makeText: Unexpected type")
 			return output, err
-		case *Footnote, *Leftnote, *Rightnote:
+		case *Footnote:
+                        text = AddTextEm(&output, text, strong, em)
+			output = append(output, ll.(*Footnote))
+		case *Leftnote:
+			output = append(output, ll.(*Leftnote))
+		case *Rightnote:
+			output = append(output, ll.(*Rightnote))
 		case *InlineQuote:
+			output = append(output, ll.(*InlineQuote))
 		case string:
-                        newline := false
+			newline := false
 			ss := ll.(string)
-                        re := regexp.MustCompile("^.* {2}$")
-                        if re.MatchString(ss) {
-                                ss = ss[:len(ss) - 2]
-                                newline = true
-                        }
+			re := regexp.MustCompile("^.* {2}$")
+			if re.MatchString(ss) {
+				ss = ss[:len(ss)-2]
+				newline = true
+			}
 			for _, letter := range ss {
 				switch letter {
 				case '*', '_':
-                                        if len(ss) != 0 {
-                                                text = fn(&output, text, strong, em)
-                                        }
-                                        if letter == '*' {
-                                                strong = !strong
-                                        } else {
-                                                em = !em
-                                        }
+					if len(ss) != 0 {
+						text = AddTextEm(&output, text, strong, em)
+					}
+					if letter == '*' {
+						strong = !strong
+					} else {
+						em = !em
+					}
 				default:
 					*text += string(letter)
 				}
 			}
-                        if newline {
-                                text = fn(&output, text, strong, em)
-                                output = append(output, &LineBreak{})
-                        }
+			if newline {
+				text = AddTextEm(&output, text, strong, em)
+				output = append(output, &LineBreak{})
+			}
 		}
 	}
 
-        text = fn(&output, text, strong, em)
+	text = AddTextEm(&output, text, strong, em)
 	return output, err
 }
 
-func makeParagraph(input []string) (*Paragraph, error) {
-	// 1. Find footnotes
-	//    Any line starting with a dagger is turned into a footnote
-	//    and placed at the last dagger location
-	// 2. Find sidenotes
-	//    Same, but for rings and dots
-	// 3. Inline quote
-	//    Beginning quote to ending quote
-	//    Emphasis running across a quote line is an error
+type consumeFootnoteState struct {
+	lastBlank          bool
+	footNoteInProgress bool
+	footNoteCompleted  bool
+	startLine          int
+	endLine            int
+	foot               []string
+}
+
+func (cfs *consumeFootnoteState) startFootnote(ii int) {
+	cfs.startLine = ii - 1
+	cfs.footNoteInProgress = true
+}
+
+func (cfs *consumeFootnoteState) endFootnote(ii int) {
+	cfs.endLine = ii
+	cfs.footNoteInProgress = false
+	cfs.footNoteCompleted = true
+}
+
+func (cfs *consumeFootnoteState) nonString(ii int) {
+	if cfs.footNoteInProgress {
+		cfs.endFootnote(ii)
+	} else {
+		cfs.lastBlank = false
+	}
+}
+
+func (cfs *consumeFootnoteState) stringEncountered(ii int, ss string) {
+	if !cfs.footNoteInProgress && !cfs.footNoteCompleted {
+		if ss == "" {
+			cfs.lastBlank = true
+		}
+		if cfs.lastBlank && len(ss) >= 3 {
+			if ss[:3] == dagger {
+				cfs.startFootnote(ii)
+				cfs.foot = append(cfs.foot, ss[3:])
+			}
+		}
+                return
+	}
+
+	if cfs.footNoteInProgress {
+                if ss == "" {
+                        cfs.endFootnote(ii + 1)
+                }
+		cfs.foot = append(cfs.foot, ss)
+	}
+}
+
+func makeFootnote(input []string) (*Footnote, error) {
+	//when presented with strings,
+	//makeText consumes them as Text, Emphasis
+	inter := []intermediates{}
+	for _, ss := range input {
+		inter = append(inter, ss)
+	}
+	elements, err := makeText(inter)
+	foot := &Footnote{}
+	foot.Note.Elements = elements
+	return foot, err
+}
+
+func consumeFootnotes(input *([]intermediates)) ([]intermediates, error) {
+
+	var err error
+	findFootnote := func(input *([]intermediates)) consumeFootnoteState {
+
+		state := consumeFootnoteState{}
+
+		for ii, ll := range *input {
+			switch ll.(type) {
+			default:
+				state.nonString(ii)
+			case string:
+				state.stringEncountered(ii, ll.(string))
+			}
+		}
+
+		state.nonString(len(*input))
+		return state
+	}
+
+        putAtDagger := func(input *([]intermediates), foot *Footnote) ([]intermediates, error) {
+                output := []intermediates{}
+                var addedFootnote bool = false
+                for _, ll := range *input {
+                        if addedFootnote {
+                                output = append(output, ll)
+                                continue
+                        }
+                        switch ll.(type) {
+                        default:
+                                output = append(output, ll)
+                        case string:
+                                ss := ll.(string)
+                                idx := strings.Index(ss, dagger)
+                                if idx == -1 {
+                                        output = append(output, ll)
+                                } else {
+                                        ss1 := strings.Trim(ss[0:idx], " ")
+                                        output = append(output, ss1)
+                                        output = append(output, foot)
+                                        if idx + 3 < len(ss) {
+                                                ss2 := strings.Trim(ss[idx + 3:], " ")
+                                                output = append(output, ss2)
+                                        }
+                                        addedFootnote = true
+                                }
+                        }
+                }
+                if addedFootnote {
+                        return output, nil
+                } else {
+                        return output, errors.New("No footnote added")
+                }
+        }
+
+	replaceFootnote := func(input *([]intermediates)) ([]intermediates, bool, error) {
+		var err error
+		state := findFootnote(input)
+		output := []intermediates{}
+		if state.footNoteCompleted {
+			for ii, ll := range *input {
+				if ii < state.startLine || ii >= state.endLine {
+					output = append(output, ll)
+				}
+			}
+                        var foot *Footnote
+                        foot, err = makeFootnote(state.foot)
+                        if err != nil {
+                                return output, state.footNoteCompleted, err
+                        }
+                        output, err = putAtDagger(&output, foot)
+		        return output, state.footNoteCompleted, err
+		} else {
+                        return *input, state.footNoteCompleted, err
+                }
+	}
 
         inters := []intermediates{}
-        for _, ss := range input {
-                inters = append(inters, ss)
+        var completed bool
+        for inters, completed, err = replaceFootnote(input); completed; {
+		if err != nil {
+			return inters, err
+		}
+		inters, completed, err = replaceFootnote(&inters)
+	}
+        
+	return inters, err
+}
+
+func printIntermediates(input []intermediates) {
+        for ii, ll := range input {
+                switch ll.(type) {
+                default:
+                        fmt.Printf("%d: %v\n", ii, ll.(Element).ToText())
+                case string:
+                        fmt.Printf("%d: %v\n", ii, ll.(string))
+                }
         }
+}
+
+func printElements(input []Element) {
+        for ii, ll := range input {
+                fmt.Printf("%d: %v\n", ii, ll.ToText())
+        }
+}
+
+func makeParagraph(input []intermediates) (*Paragraph, error) {
+        //input will be a collection of strings, notes
+	var err error
 
 	para := &Paragraph{}
-        elements, err := makeText(inters)
-        fmt.Printf("Length elements: %d\n", len(elements))
-        for _, ee := range elements {
-                para.AddElement(ee)
-        }
+	elements, err := makeText(input)
+	for _, ee := range elements {
+		para.AddElement(ee)
+	}
 
 	return para, err
 }
@@ -174,7 +339,7 @@ func consumeParagraphs(input *([]intermediates)) ([]intermediates, error) {
 	var err error
 	var para *Paragraph
 
-	paraLines := []string{}
+	paraLines := []intermediates{}
 
 	for _, ll := range *input {
 		switch ll.(type) {
@@ -183,18 +348,23 @@ func consumeParagraphs(input *([]intermediates)) ([]intermediates, error) {
 			if len(paraLines) != 0 {
 				para, err = makeParagraph(paraLines)
 				output = append(output, para)
-				paraLines = []string{}
+				paraLines = []intermediates{}
 			}
+                case *Footnote:
+                       //TODO 
+                       //Fix makeParagraphs to handle footnotes
+                       //Fix consumeFootnotes to work correctly
+                       paraLines = append(paraLines, ll)
 		case string:
 			re := regexp.MustCompile("^$")
 			if res := re.FindStringSubmatch(ll.(string)); res != nil {
 				if len(paraLines) != 0 {
 					para, err = makeParagraph(paraLines)
 					output = append(output, para)
-					paraLines = []string{}
+					paraLines = []intermediates{}
 				}
 			} else {
-				paraLines = append(paraLines, ll.(string))
+				paraLines = append(paraLines, ll)
 			}
 		}
 	}
@@ -223,7 +393,6 @@ func convertToCollection(input *([]intermediates)) ([]Collection, error) {
 }
 
 func Import(input string) ([]Collection, error) {
-
 	var intrColl []intermediates
 
 	lines := strings.Split(input, "\n")
@@ -234,6 +403,11 @@ func Import(input string) ([]Collection, error) {
 
 	intrColl, err := consumeHeaders(&intrColl)
 	if err != nil {
+		return []Collection{}, err
+	}
+
+        intrColl, err = consumeFootnotes(&intrColl)
+        if err != nil {
 		return []Collection{}, err
 	}
 
@@ -248,9 +422,6 @@ func Import(input string) ([]Collection, error) {
 	}
 
 	output, err := convertToCollection(&intrColl)
-
-	fmt.Println(intrColl)
-	fmt.Println(output)
 
 	return output, err
 }

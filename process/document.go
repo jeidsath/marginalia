@@ -202,17 +202,21 @@ func (pp *Block) ToHtml() string {
 			}
 			output += ee.ToHtml()
 			spaceNeeded = true
+                case *LineBreak:
+                        output += ee.ToHtml()
+                        output += "\n"
+			spaceNeeded = false
 		case *Footnote:
-			output += "† "
+			output += dagger + " "
 			output += ee.ToHtml()
 			spaceNeeded = true
 		case *Leftnote:
 			output += " "
 			output += ee.ToHtml()
-			output += " ˙"
+			output += " " + dot
 			spaceNeeded = false
 		case *Rightnote:
-			output += "˚ "
+			output += ring + " "
 			output += ee.ToHtml()
 			spaceNeeded = true
 		}
@@ -243,21 +247,23 @@ func (pp *Block) ToStrings() []string {
 			line = &output[len(output)-1]
 			spaceNeeded = false
 		case *Footnote:
-			*line += "†"
-			note := "†" + ee.ToText()
+			*line += dagger
+			note := dagger + ee.ToText()
+			output = append(output, "")
 			output = append(output, note)
+			output = append(output, "")
 			output = append(output, "")
 			line = &output[len(output)-1]
 			spaceNeeded = false
 		case *Leftnote:
-			note := "˙" + ee.ToText()
+			note := dot + ee.ToText()
 			output = append(output, note)
-			output = append(output, "˙")
+			output = append(output, dot)
 			line = &output[len(output)-1]
 			spaceNeeded = false
 		case *Rightnote:
-			*line += "˚"
-			note := "˚" + ee.ToText()
+			*line += ring
+			note := ring + ee.ToText()
 			output = append(output, note)
 			output = append(output, "")
 			line = &output[len(output)-1]
@@ -288,7 +294,7 @@ type Footnote struct {
 }
 
 func (ff *Footnote) ToHtml() string {
-	output := "<span class=\"footnote\">†"
+	output := "<span class=\"footnote\">" + dagger
 
 	output += ff.Note.ToHtml()
 
@@ -301,7 +307,7 @@ type Leftnote struct {
 }
 
 func (ll *Leftnote) ToHtml() string {
-	output := "<span class=\"leftnote\">˙"
+	output := "<span class=\"leftnote\">" + dot
 	output += ll.Note.ToHtml()
 	output += "</span>"
 	return output
@@ -312,7 +318,7 @@ type Rightnote struct {
 }
 
 func (rr *Rightnote) ToHtml() string {
-	output := "<span class=\"rightnote\">˚"
+	output := "<span class=\"rightnote\">" + ring
 	output += rr.Note.ToHtml()
 	output += "</span>"
 	return output

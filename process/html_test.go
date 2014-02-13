@@ -2,49 +2,10 @@ package process
 
 import (
 	"fmt"
+	"strings"
 	"testing"
-        "strings"
-        //"reflect"
+	//"reflect"
 )
-
-func TestOutput(t *testing.T) {
-	input := ""
-	output, err := Convert(input)
-	if output != "" || err != nil {
-		t.Fail()
-	}
-}
-
-//# Header #
-//<h1>Header</h1>
-func TestHeader(t *testing.T) {
-	input := "# Header #"
-	expected := "<h1>Header</h1>\n"
-	output, err := Convert(input)
-	if output != expected || err != nil {
-		t.Fail()
-	}
-}
-
-//### Header ###
-//<h3>Header</h3>
-func TestHeader3(t *testing.T) {
-	input := "### Header ###"
-	expected := "<h3>Header</h3>\n"
-	output, err := Convert(input)
-	if output != expected || err != nil {
-		t.Fail()
-	}
-}
-
-/*func TestParagraph(t *testing.T) {
-        input := "Hello World"
-        expected := "<p>Hello World</p>\n"
-	output, err := Convert(input)
-        if output != expected || err != nil {
-		t.Fail()
-	}
-}*/
 
 func TestEmphasis(t *testing.T) {
 	ee := Emphasis{Text{"Hello"}, true, false}
@@ -90,7 +51,7 @@ func TestParagraphStruct(t *testing.T) {
 	para.AddElement(&Text{"And text after a line break."})
 
 	expected_html := "<p>This is a test paragraph <strong>that contains bold</strong> text."
-	expected_html += " </br> And text after a line break.</p>"
+	expected_html += "</br>\nAnd text after a line break.</p>"
 
 	expected_text := []string{"This is a test paragraph *that contains bold* text.",
 		"And text after a line break."}
@@ -119,7 +80,9 @@ func TestFootnotes(t *testing.T) {
 
 	expected_text := []string{
 		"This is some†",
+                "",
 		"†Only *four* words.",
+                "",
 		"text.",
 	}
 
@@ -273,57 +236,86 @@ func TestInlineQuote(t *testing.T) {
 }
 
 func collectionString(coll []Collection) string {
-        output := ""
-        for _, cc := range coll {
-                output += strings.Join(cc.ToStrings(), "\n") + "\n\n"
-        }
-        return output
+	output := ""
+	for _, cc := range coll {
+		output += strings.Join(cc.ToStrings(), "\n") + "\n\n"
+	}
+	return output
+}
+
+func collectionHtml(coll []Collection) string {
+	output := ""
+	for _, cc := range coll {
+		output += cc.ToHtml() + "\n"
+	}
+	return output
 }
 
 func TestImport(t *testing.T) {
-        document := "# Title #\n"
-        document += "\n"
-        document += "A short paragraph that doesn't say very\n"
-        document += "much and is wrapped by hand to make sure\n"
-        document += "that we are smart enought to pick up the\n"
-        document += "entire paragraph.\n"
-        document += "\n"
-        document += "## Header2 ##\n"
-        document += "\n"
-        document += "A short paragraph that doesn't say anything.\n"
+	document := "# Title #\n"
+	document += "\n"
+	document += "A short *paragraph* that doesn't say very\n"
+	document += "much and is wrapped by _hand_ to make sure\n"
+	document += "that we are smart enought to pick up the\n"
+	document += "entire paragraph.\n"
+	document += "\n"
+	document += "## Header2 ##\n"
+	document += "\n"
+	document += "A short paragraph that doesn't say anything.  \n"
+	document += "But Roses are Red  \n"
+	document += "And Violets aren't  \n"
+	document += "Poetry is great!\n"
+	document += "Isn't it?\n"
 
-        coll, err := Import(document)
+	coll, err := Import(document)
 
-        if err != nil {
-                fmt.Println(err)
-                t.Fail()
-        }
+	if err != nil {
+		fmt.Println(err)
+		t.Fail()
+	}
 
-        if len(coll) != 4 {
-                fmt.Printf("Collection size: %d\n", len(coll))
-                t.Fail()
-        }
+	if len(coll) != 4 {
+		fmt.Printf("Collection size: %d\n", len(coll))
+		t.Fail()
+	}
 
-        fmt.Println(collectionString(coll))
-        t.Fail()
+	expected := "# Title #\n"
+	expected += "\n"
+	expected += "A short *paragraph* that doesn't say very "
+	expected += "much and is wrapped by _hand_ to make sure "
+	expected += "that we are smart enought to pick up the "
+	expected += "entire paragraph.\n"
+	expected += "\n"
+	expected += "## Header2 ##\n"
+	expected += "\n"
+	expected += "A short paragraph that doesn't say anything.\n"
+	expected += "But Roses are Red\n"
+	expected += "And Violets aren't\n"
+	expected += "Poetry is great! Isn't it?\n\n"
 
-/*        if len(coll) > 1 && reflect.TypeOf(coll[0]) != reflect.TypeOf(&Header{}) {
-                fmt.Printf("Collection[0]: %v\n", reflect.TypeOf(coll[0]))
-                t.Fail()
-        } else {
-                exp := []string{"Title"}
-                if head := coll[0].(*Header) ; head.Level != 1 || 
-                compareStrings(coll[0].ToStrings(), exp) {
-                        fmt.Println("Bad Header")
-                        t.Fail()
-                }
-        }
+	ss := collectionString(coll)
+	if expected != ss {
+		fmt.Println(ss)
+		t.Fail()
+	}
 
-        if len(coll) > 2 && reflect.TypeOf(coll[1]) != reflect.TypeOf(&Paragraph{}) {
-                fmt.Printf("Collection[0]: %v\n", reflect.TypeOf(coll[1]))
-                t.Fail()
-        }
-        */
+	expected_html := "<h1>Title</h1>\n"
+	expected_html += "<p>A short <strong>paragraph</strong> "
+	expected_html += "that doesn't say very much and is wrapped "
+	expected_html += "by <em>hand</em> to make sure that we are "
+	expected_html += "smart enought to pick up the entire "
+	expected_html += "paragraph.</p>\n"
+	expected_html += "<h2>Header2</h2>\n"
+	expected_html += "<p>A short paragraph that doesn't say anything.</br>\n"
+	expected_html += "But Roses are Red</br>\n"
+	expected_html += "And Violets aren't</br>\n"
+	expected_html += "Poetry is great! Isn't it?</p>\n"
+
+	ss = collectionHtml(coll)
+	if expected_html != ss {
+		fmt.Println(ss)
+		t.Fail()
+	}
 
 }
 
@@ -342,4 +334,86 @@ func TestRejustify(t *testing.T) {
 		fmt.Println(Rejustify(lines))
 		t.Fail()
 	}
+}
+
+func TestUnicode(t *testing.T) {
+	ss := "† And some text"
+	if ss[:3] != "†" {
+		fmt.Println(len("†"))
+		t.Fail()
+	}
+}
+
+func printComparedStrings(ss1, ss2 string) {
+        fmt.Printf("||%v||\n", ss1)
+        fmt.Printf("||%v||\n", ss2)
+
+        longer := ss1
+        shorter := ss2
+        if len(ss2) > len(ss1) {
+                longer = ss2
+                shorter = ss1
+        }
+
+        output := []rune{}
+        for ii, cc := range longer {
+                if ii >= len(shorter) {
+                        output = append(output, 'X')
+                        continue
+                }
+                if longer[ii] != shorter[ii] {
+                        output = append(output, 'X')
+                } else {
+                        output = append(output, cc)
+                }
+        }
+        fmt.Print("||")
+        fmt.Print(string(output))
+        fmt.Print("||\n")
+}
+
+func TestImportFootnotes(t *testing.T) {
+
+	document := "# Title #\n"
+	document += "\n"
+	document += "This is a test paragraph line one.\n"
+        document += "This is a test† paragraph line two (with footnote after test).\n"
+	document += "This is a test paragraph line three.\n"
+        document += "\n"
+        document += "†Hello world\n"
+        document += "\n"
+	document += "This is a test paragraph continued after the footnote.\n"
+
+        expected_html := "<h1>Title</h1>\n"
+        expected_html += "<p>This is a test paragraph line one. This is a test† "
+        expected_html += "<span class=\"footnote\">†Hello world</span> paragraph line two "
+        expected_html += "(with footnote after test). This is a test paragraph line three. "
+        expected_html += "This is a test paragraph continued after the footnote.</p>\n"
+
+        expected_text := "# Title #\n"
+        expected_text += "\n"
+        expected_text += "This is a test paragraph line one. This is a test†\n"
+        expected_text += "\n"
+        expected_text += "†Hello world\n"
+        expected_text += "\n"
+        expected_text += "paragraph line two (with footnote after test). "
+        expected_text += "This is a test paragraph line three. This is a test "
+        expected_text += "paragraph continued after the footnote.\n"
+        expected_text += "\n"
+
+	coll, err := Import(document)
+	if err != nil {
+                fmt.Printf("Error: %v", err)
+		t.Fail()
+	}
+
+        if collectionHtml(coll) != expected_html {
+                printComparedStrings(collectionHtml(coll), expected_html)
+                t.Fail()
+        }
+
+        if collectionString(coll) != expected_text {
+                printComparedStrings(collectionString(coll), expected_text)
+                t.Fail()
+        }
 }
