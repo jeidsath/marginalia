@@ -272,7 +272,7 @@ func (pp *Block) ToStrings() []string {
                         if spaceNeeded {
                                 *line += " "
                         }
-                        *line += "“" + ee.ToText() + "”"
+                        *line += lquo + ee.ToText() + rquo
                         spaceNeeded = true
 		}
 	}
