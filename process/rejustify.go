@@ -7,6 +7,17 @@ import (
 	"strings"
 )
 
+// Problems list
+
+// Sidenotes
+// Not implemented
+
+// BlockQuotes
+// Not implemented. Current mock needs to be updated for footnotes
+
+// Rejustify
+// Not implemented
+
 type intermediates interface {
 }
 
@@ -106,7 +117,7 @@ func makeText(input []intermediates) ([]Element, error) {
 			err = errors.New("makeText: Unexpected type")
 			return output, err
 		case *Footnote:
-                        text = AddTextEm(&output, text, strong, em)
+			text = AddTextEm(&output, text, strong, em)
 			output = append(output, ll.(*Footnote))
 		case *Leftnote:
 			output = append(output, ll.(*Leftnote))
@@ -181,19 +192,19 @@ func (cfs *consumeFootnoteState) stringEncountered(ii int, ss string) {
 		if ss == "" {
 			cfs.lastBlank = true
 		}
-		if cfs.lastBlank && len(ss) >= 3 {
-			if ss[:3] == dagger {
+		if cfs.lastBlank && len(ss) >= len(dagger) {
+			if ss[:len(dagger)] == dagger {
 				cfs.startFootnote(ii)
-				cfs.foot = append(cfs.foot, ss[3:])
+				cfs.foot = append(cfs.foot, ss[len(dagger):])
 			}
 		}
-                return
+		return
 	}
 
 	if cfs.footNoteInProgress {
-                if ss == "" {
-                        cfs.endFootnote(ii + 1)
-                }
+		if ss == "" {
+			cfs.endFootnote(ii + 1)
+		}
 		cfs.foot = append(cfs.foot, ss)
 	}
 }
@@ -231,40 +242,40 @@ func consumeFootnotes(input *([]intermediates)) ([]intermediates, error) {
 		return state
 	}
 
-        putAtDagger := func(input *([]intermediates), foot *Footnote) ([]intermediates, error) {
-                output := []intermediates{}
-                var addedFootnote bool = false
-                for _, ll := range *input {
-                        if addedFootnote {
-                                output = append(output, ll)
-                                continue
-                        }
-                        switch ll.(type) {
-                        default:
-                                output = append(output, ll)
-                        case string:
-                                ss := ll.(string)
-                                idx := strings.Index(ss, dagger)
-                                if idx == -1 {
-                                        output = append(output, ll)
-                                } else {
-                                        ss1 := strings.Trim(ss[0:idx], " ")
-                                        output = append(output, ss1)
-                                        output = append(output, foot)
-                                        if idx + 3 < len(ss) {
-                                                ss2 := strings.Trim(ss[idx + 3:], " ")
-                                                output = append(output, ss2)
-                                        }
-                                        addedFootnote = true
-                                }
-                        }
-                }
-                if addedFootnote {
-                        return output, nil
-                } else {
-                        return output, errors.New("No footnote added")
-                }
-        }
+	putAtDagger := func(input *([]intermediates), foot *Footnote) ([]intermediates, error) {
+		output := []intermediates{}
+		var addedFootnote bool = false
+		for _, ll := range *input {
+			if addedFootnote {
+				output = append(output, ll)
+				continue
+			}
+			switch ll.(type) {
+			default:
+				output = append(output, ll)
+			case string:
+				ss := ll.(string)
+				idx := strings.Index(ss, dagger)
+				if idx == -1 {
+					output = append(output, ll)
+				} else {
+					ss1 := strings.Trim(ss[0:idx], " ")
+					output = append(output, ss1)
+					output = append(output, foot)
+					if idx+len(dagger) < len(ss) {
+						ss2 := strings.Trim(ss[idx+len(dagger):], " ")
+						output = append(output, ss2)
+					}
+					addedFootnote = true
+				}
+			}
+		}
+		if addedFootnote {
+			return output, nil
+		} else {
+			return output, errors.New("No footnote added")
+		}
+	}
 
 	replaceFootnote := func(input *([]intermediates)) ([]intermediates, bool, error) {
 		var err error
@@ -276,49 +287,49 @@ func consumeFootnotes(input *([]intermediates)) ([]intermediates, error) {
 					output = append(output, ll)
 				}
 			}
-                        var foot *Footnote
-                        foot, err = makeFootnote(state.foot)
-                        if err != nil {
-                                return output, state.footNoteCompleted, err
-                        }
-                        output, err = putAtDagger(&output, foot)
-		        return output, state.footNoteCompleted, err
+			var foot *Footnote
+			foot, err = makeFootnote(state.foot)
+			if err != nil {
+				return output, state.footNoteCompleted, err
+			}
+			output, err = putAtDagger(&output, foot)
+			return output, state.footNoteCompleted, err
 		} else {
-                        return *input, state.footNoteCompleted, err
-                }
+			return *input, state.footNoteCompleted, err
+		}
 	}
 
-        inters := []intermediates{}
-        var completed bool
-        for inters, completed, err = replaceFootnote(input); completed; {
+	inters := []intermediates{}
+	var completed bool
+	for inters, completed, err = replaceFootnote(input); completed; {
 		if err != nil {
 			return inters, err
 		}
 		inters, completed, err = replaceFootnote(&inters)
 	}
-        
+
 	return inters, err
 }
 
 func printIntermediates(input []intermediates) {
-        for ii, ll := range input {
-                switch ll.(type) {
-                default:
-                        fmt.Printf("%d: %v\n", ii, ll.(Element).ToText())
-                case string:
-                        fmt.Printf("%d: %v\n", ii, ll.(string))
-                }
-        }
+	for ii, ll := range input {
+		switch ll.(type) {
+		default:
+			fmt.Printf("%d: %v\n", ii, ll.(Element).ToText())
+		case string:
+			fmt.Printf("%d: %v\n", ii, ll.(string))
+		}
+	}
 }
 
 func printElements(input []Element) {
-        for ii, ll := range input {
-                fmt.Printf("%d: %v\n", ii, ll.ToText())
-        }
+	for ii, ll := range input {
+		fmt.Printf("%d: %v\n", ii, ll.ToText())
+	}
 }
 
 func makeParagraph(input []intermediates) (*Paragraph, error) {
-        //input will be a collection of strings, notes
+	//input will be a collection of strings, notes
 	var err error
 
 	para := &Paragraph{}
@@ -350,11 +361,8 @@ func consumeParagraphs(input *([]intermediates)) ([]intermediates, error) {
 				output = append(output, para)
 				paraLines = []intermediates{}
 			}
-                case *Footnote:
-                       //TODO 
-                       //Fix makeParagraphs to handle footnotes
-                       //Fix consumeFootnotes to work correctly
-                       paraLines = append(paraLines, ll)
+		case *Footnote:
+			paraLines = append(paraLines, ll)
 		case string:
 			re := regexp.MustCompile("^$")
 			if res := re.FindStringSubmatch(ll.(string)); res != nil {
@@ -392,8 +400,84 @@ func convertToCollection(input *([]intermediates)) ([]Collection, error) {
 	return coll, err
 }
 
+func linearizeLeftnotes(input *([]intermediates)) ([]intermediates, error) {
+	//Left notes start at the first character of one line and continue
+	//on succeeding lines (starting at the first character)
+	//there will be a blank spaces at the first normal string
+
+        output := []intermediates{}
+	for ii, ll := range *input {
+		switch ll.(type) {
+		default:
+			return []intermediates{}, errors.New("linearizeLeftnotes: non-string input")
+		case string:
+                        ss := ll.(string)
+                        re := regexp.MustCompile("^" + dot + ".*$")
+                        if re.MatchString(ss) {
+                                sideNote := ""
+                                re2 := regexp.MustCompile("^(" + dot + ".*) {2}.*$") 
+                                match := re2.FindStringSubmatch(ss)
+                                if match != nil {
+                                        replace := regexp.MustCompile("^" + dot + ".* {2}(.*$)")
+                                        sideNote = strings.Trim(match[1], " ")
+                                        if ii != 0 {
+                                                //Fix for blockquote
+                                                output[ii-1] = strings.TrimLeft(output[ii-1].(string), " ")
+                                        }
+                                        for jj := ii + 1; jj < len(*input) ; jj++ {
+                                                //Fix for blockquote
+                                                ss := (*input)[jj].(string)
+                                                if len(ss) == 0 || ss[0:1] == " " {
+                                                        (*input)[jj] = strings.TrimLeft(ss, " ")
+                                                        break
+                                                } else {
+                                                        rInner := regexp.MustCompile("^(.*) {2}(.*$)")
+                                                        mInner := rInner.FindStringSubmatch(ss)
+                                                        if mInner == nil {
+                                                                sideNote += " " + strings.Trim(ss, " ")
+                                                                (*input)[jj] = ""
+                                                        } else {
+                                                                sideNote += " " + strings.Trim(mInner[1], " ")
+                                                                //Fix for blockquote
+                                                                (*input)[jj] = strings.Trim(mInner[2], " ")
+                                                        }
+                                                }
+                                                fmt.Printf("SIDENOTE: %v\n", sideNote)
+                                        }
+                                        ss = replace.ReplaceAllString(ss, "$1")
+                                        ss = strings.TrimLeft(ss, " ")
+                                        sideNote = strings.Trim(sideNote, " ")
+                                        ss = sideNote + "  " + ss
+                                        output = append(output, ss)
+                                }
+                        } else {
+                                output = append(output, ss)
+                        }
+		}
+	}
+
+	return output, nil
+}
+
+func linearizeRightnotes(input *([]intermediates)) ([]intermediates, error) {
+	return *input, nil
+}
+
+func consumeSidenotes(input *([]intermediates)) ([]intermediates, error) {
+	// 0. Check for unmatched sidenotes
+	// 1. convert sidenotes into single line
+	// 2. slurp them
+	// 3. insert them
+	// If it has a sidenote, it starts with a dot or has a ring
+
+	// A footnote may be interspaced
+
+	return *input, nil
+}
+
 func Import(input string) ([]Collection, error) {
 	var intrColl []intermediates
+	var err error
 
 	lines := strings.Split(input, "\n")
 
@@ -401,13 +485,28 @@ func Import(input string) ([]Collection, error) {
 		intrColl = append(intrColl, ll)
 	}
 
-	intrColl, err := consumeHeaders(&intrColl)
+	/*intrColl, err = linearizeRightnotes(&intrColl)
+	        if err != nil {
+			return []Collection{}, err
+		}
+
+	        intrColl, err = linearizeLeftnotes(&intrColl)
+	        if err != nil {
+			return []Collection{}, err
+		}*/
+
+	intrColl, err = consumeHeaders(&intrColl)
 	if err != nil {
 		return []Collection{}, err
 	}
 
-        intrColl, err = consumeFootnotes(&intrColl)
-        if err != nil {
+	intrColl, err = consumeFootnotes(&intrColl)
+	if err != nil {
+		return []Collection{}, err
+	}
+
+	intrColl, err = consumeSidenotes(&intrColl)
+	if err != nil {
 		return []Collection{}, err
 	}
 

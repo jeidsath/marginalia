@@ -417,3 +417,57 @@ func TestImportFootnotes(t *testing.T) {
                 t.Fail()
         }
 }
+
+/* func TestImportBadSidenotes(t *testing.T) {
+        document := "# Test document #\n"
+        document += "This is a paragraph\n"
+        document += "˙Bad Left sidenote\n"
+        document += "This is a sentence\n"
+
+        _, err := Import(document)
+        if err == nil || err.Error() != "Mismatched sidenotes" {
+                fmt.Println(err)
+                t.Fail()
+        }
+} */
+
+func TestLeftLinearize(t *testing.T) {
+        inters := []intermediates{}
+        inters = append(inters, "This is a sidenote paragraph")
+        inters = append(inters, "          with several lines")
+        inters = append(inters, "˙Left     and ˙one l-sidenote")
+        inters = append(inters, "sidenote  that should be beside")
+        inters = append(inters, "          these lines on the")
+        inters = append(inters, "left. This is a second paragraph.")
+
+        output, err := linearizeLeftnotes(&inters)
+
+        output_ss := []string{}
+        for _, ll := range output {
+                output_ss = append(output_ss, ll.(string))
+        }
+
+        expected := []string{
+        "This is a sidenote paragraph",
+        "with several lines",
+        "˙Left sidenote  and ˙one l-sidenote",
+        "that should be beside",
+        "these lines on the",
+        "left. This is a second paragraph.",
+        }
+
+        if err != nil {
+                fmt.Println(err)
+                t.Fail()
+        }
+
+        if !compareStrings(output_ss, expected) {
+                for _, ss := range output_ss {
+                       fmt.Println(ss) 
+                }
+                t.Fail()
+        }
+}
+
+
+
